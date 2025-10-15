@@ -135,7 +135,7 @@ class SRModel(BaseModel):
         scale = self.opt.get('scale', 1)
         if pad_h > 0 or pad_w > 0:
             _, _, h, w = self.output.size()
-            self.output = self.output[:, :, 0:h - pad_h * scale, 0:w - pad_w * scale]
+            #self.output = self.output[:, :, 0:h - pad_h * scale, 0:w - pad_w * scale]
 
     def test_selfensemble(self):
         # TODO: to be tested

@@ -16,6 +16,7 @@ version.py
 
 # ignored files with suffix
 *.html
+*.pth
 *.png
 *.jpeg
 *.jpg

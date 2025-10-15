@@ -1,11 +1,16 @@
 from torch.utils import data as data
 from torchvision.transforms.functional import normalize
+from torch.nn.functional import pad
 
 from basicsr.data.data_util import paired_paths_from_folder, paired_paths_from_lmdb, paired_paths_from_meta_info_file
 from basicsr.data.transforms import augment, paired_random_crop
 from basicsr.utils import FileClient, bgr2ycbcr, imfrombytes, img2tensor
 from basicsr.utils.registry import DATASET_REGISTRY
 
+def compute_padding(h, w, window_size=8):
+    pad_h = (window_size - h % window_size) if h % window_size != 0 else 0
+    pad_w = (window_size - w % window_size) if w % window_size != 0 else 0
+    return pad_h, pad_w
 
 @DATASET_REGISTRY.register()
 class PairedImageDataset(data.Dataset):
@@ -95,12 +100,22 @@ class PairedImageDataset(data.Dataset):
 
         # BGR to RGB, HWC to CHW, numpy to tensor
         img_gt, img_lq = img2tensor([img_gt, img_lq], bgr2rgb=True, float32=True)
+        window_size = 8
+        _, h, w = img_lq.shape
+
+        pad_h, pad_w = compute_padding(h, w, window_size)
+        if pad_h != 0 or pad_w != 0:
+        # pad reflectively on bottom and right
+            img_lq = pad(img_lq, (0, pad_w, 0, pad_h), 'reflect')
+            img_gt = pad(img_gt, (0, pad_w * scale, 0, pad_h * scale), 'reflect')
+
         # normalize
         if self.mean is not None or self.std is not None:
             normalize(img_lq, self.mean, self.std, inplace=True)
             normalize(img_gt, self.mean, self.std, inplace=True)
 
-        return {'lq': img_lq, 'gt': img_gt, 'lq_path': lq_path, 'gt_path': gt_path}
+        return {'lq': img_lq, 'gt': img_gt, 'lq_path': lq_path,
+                'gt_path': gt_path, 'pad_h': pad_h, 'pad_w': pad_w }
 
     def __len__(self):
         return len(self.paths)

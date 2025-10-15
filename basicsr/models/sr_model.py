@@ -88,6 +88,8 @@ class SRModel(BaseModel):
         self.lq = data['lq'].to(self.device)
         if 'gt' in data:
             self.gt = data['gt'].to(self.device)
+        self.pad_h = data.get('pad_h', 0)
+        self.pad_w = data.get('pad_w', 0)
 
     def optimize_parameters(self, current_iter):
         self.optimizer_g.zero_grad()
@@ -128,6 +130,12 @@ class SRModel(BaseModel):
             with torch.no_grad():
                 self.output = self.net_g(self.lq)
             self.net_g.train()
+
+        pad_h, pad_w = getattr(self, 'pad_h', 0), getattr(self, 'pad_w', 0)
+        scale = self.opt.get('scale', 1)
+        if pad_h > 0 or pad_w > 0:
+            _, _, h, w = self.output.size()
+            self.output = self.output[:, :, 0:h - pad_h * scale, 0:w - pad_w * scale]
 
     def test_selfensemble(self):
         # TODO: to be tested

@@ -9,12 +9,12 @@ datasets:
   train:
     name: DIV2K
     type: PairedImageDataset
-    dataroot_gt: ../drive/MyDrive/div2k_training_data/DIV2K_train_HR 2
-    dataroot_lq: ../drive/MyDrive/div2k_training_data/DIV2K_train_LR_bicubic/X2
+    dataroot_gt: ../div2k_training_data/DIV2K_train_HR 2
+    dataroot_lq: ../div2k_training_data/DIV2K_train_LR_bicubic/X2
     filename_tmpl: '{}x2'
     io_backend:
       type: disk
-    gt_size: 96
+    gt_size: 128
     use_hflip: true
     use_rot: true
 
@@ -28,8 +28,8 @@ datasets:
   val:
     name: Set5
     type: PairedImageDataset
-    dataroot_gt: ../drive/MyDrive/div2k_training_data/Set5/image_SRF_2/HR
-    dataroot_lq: ../drive/MyDrive/div2k_training_data/Set5/image_SRF_2/LR
+    dataroot_gt: ../div2k_training_data/Set5/image_SRF_2/HR
+    dataroot_lq: ../div2k_training_data/Set5/image_SRF_2/LR
     filename_tmpl: '{}_LR'
     io_backend:
       type: disk
@@ -93,7 +93,7 @@ network_t2:
   type: SwinIR
   upscale: 2
   in_chans: 3
-  img_size: 64
+  img_size: 48
   window_size: 8
   img_range: 1.
   embed_dim: 180
@@ -105,9 +105,11 @@ network_t2:
 
 # path (uncomment out resume_state)
 path:
-  models: ../drive/MyDrive/div2k_training_data/checkpoints
+  models: ../pretrained_models/
   pretrain_network_g: ~
   pretrain_network_t:  001_classicalSR_DF2K_s64w8_SwinIR-M_x2.pth
+  pretrain_network_t2:  001_classicalSR_DF2K_s48w8_SwinIR-M_x2.pth
+  
   strict_load_g: true
   #resume_state: ../drive/MyDrive/div2k_training_data/checkpoints/FOLDER
 

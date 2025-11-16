@@ -1,7 +1,9 @@
 import torch
-import numpy as np
+import torch.nn as nn
 from collections import OrderedDict
 
+from basicsr.archs import build_network
+from basicsr.utils import get_root_logger
 from basicsr.utils.registry import MODEL_REGISTRY
 from basicsr.utils.matlab_functions import imresize
 
@@ -26,12 +28,34 @@ class DUKD(BaseKD):
     def init_training_settings(self):
         self.zoom_out = self.opt['train']['dukd_opt'].get('zoom_out', False)
         self.n_gt_sub = self.opt['train']['dukd_opt'].get('n_gt_sub', [1])
+        # call parent to set up student, losses, optimizers, schedulers
         super().init_training_settings()
+
+        # --- Optional: build and freeze a second teacher (net_t2) ---
+        self.net_t2 = None
+        if 'network_t2' in self.opt:
+            logger = get_root_logger()
+            logger.info('Building second teacher network: network_t2.')
+            self.net_t2 = build_network(self.opt['network_t2'])
+            self.net_t2 = self.model_to_device(self.net_t2)
+            load_path_t2 = self.opt['path'].get('pretrain_network_t2', None)
+            if load_path_t2 is not None:
+                param_key_t2 = self.opt['path'].get('param_key_t2', 'params')
+                self.load_network(self.net_t2, load_path_t2, True, param_key_t2)
+            # freeze and set eval mode so it won't be affected by training/eval toggles
+            for p in self.net_t2.parameters():
+                p.requires_grad_(False)
+            self.net_t2.eval()
 
     def optimize_parameters(self, current_iter):
         self.optimizer_g.zero_grad()
+        # student forward
         self.output = self.net_g(self.lq)
-        self.output_t = self.net_t(self.lq)
+        # teacher forward without grads
+        with torch.no_grad():
+            self.output_t = self.net_t(self.lq)
+            if getattr(self, 'net_t2', None) is not None:
+                self.output_t2 = self.net_t2(self.lq)
 
         l_total = 0
         loss_dict = OrderedDict()
@@ -43,9 +67,20 @@ class DUKD(BaseKD):
             loss_dict['l_pix'] = l_pix
 
         if self.cri_kd:
-            l_kd = self.cri_kd(self.output, self.output_t)
+            # combine KD from teacher1 and optional teacher2
+            if getattr(self, 'net_t2', None) is not None:
+                l_kd_t1 = self.cri_kd(self.output, self.output_t)
+                l_kd_t2 = self.cri_kd(self.output, self.output_t2)
+                w1 = 1.0
+                w2 = float(self.teacher2_weight)
+                l_kd = (l_kd_t1 * w1 + l_kd_t2 * w2) / (w1 + w2)
+                loss_dict['l_kd_t1'] = l_kd_t1
+                loss_dict['l_kd_t2'] = l_kd_t2
+                loss_dict['l_kd'] = l_kd
+            else:
+                l_kd = self.cri_kd(self.output, self.output_t)
+                loss_dict['l_kd'] = l_kd
             l_total += l_kd
-            loss_dict['l_kd'] = l_kd
 
         l_total.backward()
         self.optimizer_g.step()

@@ -120,6 +120,7 @@ train:
   dukd_opt:
     n_gt_sub: [1]
     zoom_out: false
+    teacher2_weight = 1.0 # 1 = equal weighting 
   ema_decay: 0.999
   optim_g:
     type: Adam

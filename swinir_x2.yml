@@ -19,8 +19,8 @@ datasets:
     use_rot: true
 
     # data loader
-    num_worker_per_gpu: 4
-    batch_size_per_gpu: 8
+    num_worker_per_gpu: 6
+    batch_size_per_gpu: 6
     use_amp: true
     dataset_enlarge_ratio: 100
     prefetch_mode: ~
@@ -38,7 +38,7 @@ datasets:
    type: PairedImageDataset
    dataroot_gt:  C:\Users\rowan\Documents\CISC 457\Set14\HR
    dataroot_lq: C:\Users\rowan\Documents\CISC 457\Set14\LR
-   filename_tmpl: '{}x2'
+   filename_tmpl: '{}_LR'
    io_backend:
      type: disk
   val_2:
@@ -46,7 +46,7 @@ datasets:
    type: PairedImageDataset
    dataroot_gt: C:\Users\rowan\Documents\CISC 457\BSDS100\HR
    dataroot_lq: C:\Users\rowan\Documents\CISC 457\BSDS100\LR
-   filename_tmpl: '{}x2'
+   filename_tmpl: '{}_LR'
    io_backend:
      type: disk
   val_3:
@@ -54,7 +54,7 @@ datasets:
    type: PairedImageDataset
    dataroot_gt: C:\Users\rowan\Documents\CISC 457\Urban100\HR
    dataroot_lq: C:\Users\rowan\Documents\CISC 457\Urban100\LR
-   filename_tmpl: '{}x2'
+   filename_tmpl: '{}_2_LR'
    io_backend:
      type: disk
 
@@ -105,14 +105,15 @@ network_t2:
 
 # path (uncomment out resume_state)
 path:
-  models: ../pretrained_models/
+  models: pretrained_models/
   pretrain_network_g: ~
-  pretrain_network_t:  001_classicalSR_DF2K_s64w8_SwinIR-M_x2.pth
-  pretrain_network_t2:  001_classicalSR_DF2K_s48w8_SwinIR-M_x2.pth
+  pretrain_network_t:  C:\Users\rowan\OneDrive\Documents\GitHub\BasicSR\pretrained_models\001_classicalSR_DF2K_s64w8_SwinIR-M_x2(1).pth
+  pretrain_network_t2:  C:\Users\rowan\OneDrive\Documents\GitHub\BasicSR\pretrained_models\001_classicalSR_DIV2K_s48w8_SwinIR-M_x2.pth
 
   strict_load_g: true
-  #resume_state: ../drive/MyDrive/div2k_training_data/checkpoints/FOLDER
-
+  resume_state: experiments\DUKD_SwinIR_x2c180s36_c60s24\training_states\1100.state
+  # ADD THIS SECTION TO PREVENT TEACHER PATHS FROM BEING OVERWRITTEN
+  ignore_resume_networks: ['network_t', 'network_t2']
 # training settings
 train:
   noisy:
@@ -120,11 +121,12 @@ train:
   dukd_opt:
     n_gt_sub: [1]
     zoom_out: false
+    teacher2_weight: 1.0 # 1.0 is equal
   ema_decay: 0.999
   optim_g:
     type: Adam
-    lr: !!float 1e-4
-    weight_decay: 0
+    lr: !!float 1e-5
+    weight_decay: !!float 1e-4
     betas: [0.9, 0.99]
 
   scheduler:
@@ -148,7 +150,7 @@ train:
 
 # validation settings
 val:
-  val_freq: !!float 2e3
+  val_freq: !!float 1e3
   save_img: false
   self_ensemble: false
 
@@ -165,7 +167,7 @@ val:
 
 # logging settings
 logger:
-  print_freq: 100
+  print_freq: 50
   save_checkpoint_freq: !!float 1e3
   use_tb_logger: true
   wandb:

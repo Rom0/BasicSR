@@ -1,0 +1,13 @@
+[project]
+name = "basicsr"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "absl-py>=2.3.1",
+    "google>=3.0.0",
+    "numpy>=2.2.6",
+    "sympy>=1.14.0",
+    "wandb>=0.23.0",
+]
